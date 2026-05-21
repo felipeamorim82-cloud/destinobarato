@@ -235,15 +235,29 @@ export default function DestinoBarato() {
 
   const selectDest = (d) => { setDest(d); setContent(null); setView("detail"); window.scrollTo(0,0); };
 
-  const res = await fetch("/api/generate", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 4096,
-    messages: [{ role: "user", content: buildPrompt(dest, days, traveler) }]
-  })
-});
+  const generateContent = useCallback(async () => {
+    if(!dest) return;
+    setLoading(true); setContent(null);
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 4096,
+          messages: [{ role: "user", content: buildPrompt(dest, days, traveler) }]
+        })
+      });
+      const data = await res.json();
+      const txt = data.content?.[0]?.text||"";
+      const clean = txt.replace(/```json|```/g,"").trim();
+      const parsed = JSON.parse(clean);
+      setContent(parsed); setActiveTab("roteiro");
+    } catch(e) {
+      console.error(e);
+      alert("Erro ao gerar o roteiro. Verifique sua conexão e tente novamente.");
+    } finally { setLoading(false); }
+  }, [dest, days, traveler]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(`https://destinobarato.com.br/destino/${dest?.id}`);
